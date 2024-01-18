@@ -4,16 +4,22 @@ const AWS = require('aws-sdk');
 
 router.post('/classify', async function(req, res, next) {
   try {
-    // Assuming you receive an AWS temporary access key, secret key, and region
+   
     AWS.config.update({
-      accessKeyId: 'AKIARAR74F5B2ZJFROOU',
-      secretAccessKey: '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',
+      accessKeyId: '',
+      secretAccessKey: '',
       region: 'ap-southeast-1'
     });
 
     const rekognition = new AWS.Rekognition();
 
-    // Assuming you are using a simple logic to detect labels using AWS Rekognition
+    if (!req.files || !req.files.file || !req.files.file.data) {
+      // If the file data is missing
+      return res.status(400).json({
+        error: 'Please Select an image'
+      });
+    }
+
     const params = {
       Image: {
         Bytes: req.files.file.data
@@ -26,12 +32,28 @@ router.post('/classify', async function(req, res, next) {
     const labels = response.Labels.map(label => label.Name);
 
     res.json({
-      "labels": labels
+      labels: labels
     });
   } catch (error) {
     console.error("Error:", error);
+
+    if (error.code === 'MissingRequiredParameter') {
+      // Handle missing required parameters in case
+      return res.status(400).json({
+        error: 'Missing required parameters'
+      });
+    }
+
+    if (error.statusCode === 400) {
+      // Handle AWS Rekognition validation errors
+      return res.status(400).json({
+        error: 'AWS Rekognition validation error',
+        details: error.message
+      });
+    }
+
     res.status(500).json({
-      "error": "Unable to process the request"
+      error: 'Server Unreachable at the moment'
     });
   }
 });
